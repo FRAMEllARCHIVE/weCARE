@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="weCare - Your personal healthcare assistant" />
+  <title>weCare</title>
+  
+  <style>
+    :root {
+      --bg-color: #1e1e2f;
+      --input-bg: #2a2a3d;
+      --text-color: #f0f0f0;
+      --accent-color: #4e9eff;
+      --secondary-color: #888;
+      --error-color: #ff4e4e;
+      --success-color: #4eff4e;
+      --message-user-bg: rgba(78, 158, 255, 0.8);
+      --message-assistant-bg: rgba(42, 42, 61, 0.9);
+      --border-radius: 22px;
+      --transition-speed: 0.3s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .header {
+      position: relative;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 10vw, 5rem);
+      margin-bottom: 0.5rem;
+      color: var(--accent-color);
+      text-align: center;
+      transition: transform 0.5s ease, opacity 0.5s ease;
+      letter-spacing: -0.05em;
+    }
+
+    .tagline {
+      font-size: 1.1rem;
+      color: var(--secondary-color);
+      margin-bottom: 1.5rem;
+    }
+
+    @keyframes titlePulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+    }
+
+    h1.pulsing {
+      animation: titlePulse 1.5s infinite;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 700px;
+      border-radius: var(--border-radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 200px);
+      min-height: 400px;
+    }
+
+    .conversation {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      padding-right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .conversation::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .conversation::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+
+    .conversation::-webkit-scrollbar-thumb {
+      background-color: var(--secondary-color);
+      border-radius: 20px;
+    }
+
+    .message {
+      padding: 12px 16px;
+      border-radius: 16px;
+      max-width: 85%;
+      word-break: break-word;
+      animation: messageFadeIn 0.3s ease;
+    }
+
+    @keyframes messageFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .user-message {
+      align-self: flex-end;
+      background-color: var(--message-user-bg);
+      border-radius: 16px 16px 0 16px;
+    }
+
+    .assistant-message {
+      align-self: flex-start;
+      background-color: var(--message-assistant-bg);
+      border-radius: 16px 16px 16px 0;
+    }
+
+    .message-time {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .input-section {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      position: relative;
+    }
+
+    .input-wrapper {
+      position: relative;
+      flex: 1;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 50px 14px 16px;
+      font-size: 1rem;
+      border-radius: var(--border-radius);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--input-bg);
+      color: var(--text-color);
+      transition: border-color var(--transition-speed) ease;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(78, 158, 255, 0.2);
+    }
+
+    input[type="text"]:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .btn {
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      transition: background-color var(--transition-speed) ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+    }
+
+    .btn.pulsing {
+      animation: pulse 1s infinite;
+      color: var(--accent-color);
+    }
+
+    .status-indicator {
+      position: absolute;
+      bottom: -30px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--secondary-color);
+      opacity: 0;
+      transition: opacity var(--transition-speed) ease;
+    }
+
+    .status-indicator.visible {
+      opacity: 1;
+    }
+
+    .clear-btn {
+      position: absolute;
+      top: -40px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: var(--secondary-color);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all var(--transition-speed) ease;
+    }
+
+    .clear-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--text-color);
+    }
+
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--secondary-color);
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+
+      .chat-container {
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      .tagline {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="titleElement">weCare</h1>
+    <div class="tagline">Your Personal 
+Healthcare Assistant</div>
+  </div>
+
+  <div class="chat-container">
+    <div id="conversation" class="conversation">
+      <div class="message assistant-message">
+        Hello, I'm Cindy from weCare. How can I help you with your health concerns today?
+        <div class="message-time">Now</div>
+      </div>
+    </div>
+    
+    <button id="clearChat" class="clear-btn">Clear chat</button>
+    
+    <div class="input-section">
+      <div class="input-wrapper">
+        <input type="text" id="userInput" placeholder="Type your health concern..." aria-label="Message input" autocomplete="off" />
+        <div class="action-buttons">
+          <button id="sendBtn" class="btn" aria-label="Send message">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+          <button id="micBtn" class="btn" aria-label="Voice input">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="statusIndicator" class="status-indicator"></div>
+  </div>
+
+  <div class="footer">
+    &copy; 2025 weCare Health Services | For emergencies, always call 999
+  </div>
+
+  <script>
+    const apiKey = 'AIzaSyAi-GeDx3FFqvkUPuKxFKdOMv8RLUetuDQ';
+    const titleElement = document.getElementById('titleElement');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const conversationDiv = document.getElementById('conversation');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const clearChatBtn = document.getElementById('clearChat');
+    
+    let conversationHistory = [];
+    let isProcessing = false;
+    
+    const initialMessage = {
+      role: "model",
+      text: "Hello, I'm Cindy from weCare. How can I help you with your health concerns today?"
+    };
+    conversationHistory.push(initialMessage);
+    
+    const preprompt = "In plain text, not markup. Never answer in a robotic or unnatural way. You are Cindy, a caring healthcare worker who is trying to diagnose the user and help them get in touch with the right healthcare professional. Be empathetic and provide simple and concise suggestions based on the symptoms or issues they mention. If the request is not health related then remind them this is a helpline for people with mental and physical ailments. (Never mention that you are an ai and please respond in plain text not markup) ";
+    
+    function setLoadingState(isLoading) {
+      isProcessing = isLoading;
+      
+      if (isLoading) {
+        titleElement.classList.add('pulsing');
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        micBtn.disabled = true;
+        statusIndicator.textContent = "Cindy is typing...";
+        statusIndicator.classList.add('visible');
+      } else {
+        titleElement.classList.remove('pulsing');
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        micBtn.disabled = false;
+        statusIndicator.classList.remove('visible');
+        
+        setTimeout(() => {
+          userInput.focus();
+        }, 100);
+      }
+    }
+    
+    function formatTimestamp() {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    function buildConversationPayload(newMessage) {
+      const historyMessages = conversationHistory.map(message => ({
+        role: message.role === "user" ? "user" : "model",
+        parts: [{ text: message.text }]
+      }));
+      
+      return {
+        contents: [
+          { role: "user", parts: [{ text: preprompt }] },
+          ...historyMessages,
+          { role: "user", parts: [{ text: newMessage }] }
+        ]
+      };
+    }
+    
+    function addMessageToUI(role, text) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+      
+      const timeDiv = document.createElement('div');
+      timeDiv.classList.add('message-time');
+      timeDiv.textContent = formatTimestamp();
+      
+      messageDiv.textContent = text;
+      messageDiv.appendChild(timeDiv);
+      
+      conversationDiv.appendChild(messageDiv);
+      scrollToBottom();
+    }
+    
+    function scrollToBottom() {
+      conversationDiv.scrollTop = conversationDiv.scrollHeight;
+    }
+    
+    function clearConversation() {
+      conversationHistory = [initialMessage];
+      conversationDiv.innerHTML = '';
+      addMessageToUI('assistant', initialMessage.text);
+    }
+    
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text || isProcessing) return;
+      
+      userInput.value = '';
+      addMessageToUI('user', text);
+      conversationHistory.push({ role: "user", text });
+      
+      setLoadingState(true);
+      
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(buildConversationPayload(text))
+          }
+        );
+        
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I am having trouble processing your request right now. Could you please try again?';
+        
+        conversationHistory.push({ role: "model", text: result });
+        
+        setTimeout(() => {
+          addMessageToUI('assistant', result);
+          setLoadingState(false);
+        }, 500);
+        
+      } catch (err) {
+        console.error(err);
+        addMessageToUI('assistant', 'I apologize, but I am having trouble connecting right now. Please try again in a moment.');
+        setLoadingState(false);
+      }
+    }
+    
+    function initSpeechRecognition() {
+      if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+        micBtn.style.display = 'none';
+        return;
+      }
+      
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      
+      recognition.onstart = () => {
+        micBtn.classList.add('pulsing');
+        statusIndicator.textContent = "Listening...";
+        statusIndicator.classList.add('visible');
+      };
+      
+      recognition.onresult = event => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+        sendMessage();
+      };
+      
+      recognition.onerror = event => {
+        if (event.error !== 'aborted') {
+          console.error('Speech recognition error:', event.error);
+          statusIndicator.textContent = `Microphone error: ${event.error}`;
+          statusIndicator.classList.add('visible');
+          setTimeout(() => {
+            statusIndicator.classList.remove('visible');
+          }, 3000);
+        }
+        micBtn.classList.remove('pulsing');
+      };
+      
+      recognition.onend = () => {
+        micBtn.classList.remove('pulsing');
+        statusIndicator.classList.remove('visible');
+      };
+      
+      return recognition;
+    }
+    
+    const speechRecognition = initSpeechRecognition();
+    
+    function startListening() {
+      if (isProcessing || !speechRecognition) return;
+      speechRecognition.start();
+    }
+    
+    userInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    
+    sendBtn.addEventListener('click', sendMessage);
+    micBtn.addEventListener('click', startListening);
+    clearChatBtn.addEventListener('click', clearConversation);
+    
+    window.addEventListener('DOMContentLoaded', () => {
+      userInput.focus();
+    });
+    
+    history.pushState(null, "", "/wecare.health");
+  </script>
+</body>
+</html>
