@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WeCare</title>
+  
+  <style>
+    :root {
+      --bg-color: #1e1e2f;
+      --input-bg: #2a2a3d;
+      --text-color: #f0f0f0;
+      --accent-color: #4e9eff;
+      --secondary-color: #888;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: var(--accent-color);
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 700px;
+      background: #252537;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      padding: 20px;
+    }
+
+    #response {
+      white-space: pre-wrap;
+      padding: 15px;
+      background: var(--input-bg);
+      border-radius: 8px;
+      margin-top: 1rem;
+      min-height: 100px;
+      color: var(--text-color);
+    }
+
+    .input-section {
+      display: flex;
+      gap: 10px;
+      margin-top: 1rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 22px;
+      border: none;
+      background: var(--input-bg);
+      color: var(--text-color);
+    }
+
+    .mic-button {
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 22px;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+opacity: 0.4;
+    }
+
+    .mic-button:hover {
+opacity: 0.8;
+    }
+
+    .mic-button svg {
+      height: 20px;
+      fill: white;
+    }
+
+    @media (max-width: 600px) {
+      .input-section {
+        flex-direction: column;
+      }
+
+      .mic-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Static Greeting -->
+  <h1>WeCare</h1>
+
+  <div class="chat-container">
+    <div class="input-section">
+      <input type="text" id="userInput" placeholder="Type your message..." />
+      <button class="mic-button" onclick="startListening()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+          <path d="M192 0C139 0 96 43 96 96l0 160c0 53 43 96 96 96s96-43 96-96l0-160c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 40c0 89.1 66.2 162.7 152 174.4l0 33.6-48 0c-13.3 0-24 10.7-24 24s10.7 24 24 24l72 0 72 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-48 0 0-33.6c85.8-11.7 152-85.3 152-174.4l0-40c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 40c0 70.7-57.3 128-128 128s-128-57.3-128-128l0-40z"/>
+        </svg>
+      </button>
+    </div>
+    <div id="response">...</div>
+  </div>
+
+  <script>
+    const apiKey = 'AIzaSyAi-GeDx3FFqvkUPuKxFKdOMv8RLUetuDQ';
+
+    async function sendToGemini() {
+      const input = document.getElementById('userInput').value;
+      const responseDiv = document.getElementById('response');
+      if (!input.trim()) return;
+
+      responseDiv.textContent = 'Thinking...';
+
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: input }]
+                }
+              ]
+            })
+          }
+        );
+
+        const data = await res.json();
+        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
+        responseDiv.textContent = result;
+      } catch (err) {
+        console.error(err);
+        responseDiv.textContent = 'Error: Could not reach Gemini API.';
+      }
+    }
+
+    function startListening() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = event => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('userInput').value = transcript;
+        sendToGemini();
+      };
+
+      recognition.onerror = event => {
+        alert('Speech recognition error: ' + event.error);
+      };
+
+      recognition.start();
+    }
+
+    document.getElementById('userInput').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        sendToGemini();
+      }
+    });
+  </script>
+</body>
+</html>
