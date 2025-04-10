@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WeCare</title>
+  <title>weCare</title>
   
   <style>
     :root {
@@ -27,7 +27,7 @@
     }
 
     h1 {
-      font-size: 2rem;
+      font-size: 5rem;
       margin-bottom: 1.5rem;
       color: var(--accent-color);
     }
@@ -35,17 +35,16 @@
     .chat-container {
       width: 100%;
       max-width: 700px;
-      background: #252537;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0);
+      border-radius: 22px;
       padding: 20px;
     }
 
     #response {
       white-space: pre-wrap;
       padding: 15px;
-      background: var(--input-bg);
-      border-radius: 8px;
+      background: rgba(0,0,0,0);
+      border-radius: 22px;
       margin-top: 1rem;
       min-height: 100px;
       color: var(--text-color);
@@ -78,16 +77,36 @@
       display: flex;
       align-items: center;
       justify-content: center;
-opacity: 0.4;
+      opacity: 0.4;
+      transition: opacity 0.3s ease;
     }
 
     .mic-button:hover {
-opacity: 0.8;
+      opacity: 0.8;
     }
 
     .mic-button svg {
       height: 20px;
       fill: white;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+    }
+
+    .mic-button.pulsing {
+      animation: pulse 1s infinite;
     }
 
     @media (max-width: 600px) {
@@ -102,8 +121,7 @@ opacity: 0.8;
   </style>
 </head>
 <body>
-  <!-- Static Greeting -->
-  <h1>WeCare</h1>
+  <h1>weCare</h1>
 
   <div class="chat-container">
     <div class="input-section">
@@ -125,7 +143,7 @@ opacity: 0.8;
       const responseDiv = document.getElementById('response');
       if (!input.trim()) return;
 
-      responseDiv.textContent = 'Thinking...';
+      responseDiv.textContent = '...';
 
       try {
         const res = await fetch(
@@ -155,19 +173,28 @@ opacity: 0.8;
     }
 
     function startListening() {
+      const micButton = document.querySelector('.mic-button');
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
+      micButton.classList.add('pulsing');
+      
       recognition.onresult = event => {
         const transcript = event.results[0][0].transcript;
         document.getElementById('userInput').value = transcript;
         sendToGemini();
+        micButton.classList.remove('pulsing');
       };
 
       recognition.onerror = event => {
         alert('Speech recognition error: ' + event.error);
+        micButton.classList.remove('pulsing');
+      };
+
+      recognition.onend = () => {
+        micButton.classList.remove('pulsing');
       };
 
       recognition.start();
@@ -178,6 +205,9 @@ opacity: 0.8;
         sendToGemini();
       }
     });
+
+history.pushState(null, "", "/wecare.health");
+
   </script>
 </body>
 </html>
