@@ -145,9 +145,9 @@
       const responseDiv = document.getElementById('response');
       if (!input.trim()) return;
 
-      responseDiv.textContent = 'thinking . . .';
+      responseDiv.textContent = '. . .';
 
-      const preprompt = "You are Cindy, a caring healthcare worker who is trying to diagnose the user and help them get in touch with the right healthcare professional. Be empathetic and provide suggestions based on the symptoms or issues they mention.";
+      const preprompt = "You are Cindy, a caring healthcare worker who is trying to diagnose the user and help them get in touch with the right healthcare professional. Be empathetic and provide simple and concise suggestions based on the symptoms or issues they mention. If the request is not health related then remind them this is a helpline for people with mental and physical ailments. (Never mention that you are an ai) ";
 
       try {
         const res = await fetch(
