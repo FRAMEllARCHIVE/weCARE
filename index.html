@@ -32,6 +32,26 @@
       margin-bottom: 1.5rem;
       color: var(--accent-color);
       text-align: center;
+      transition: transform 0.5s ease, opacity 0.5s ease;
+    }
+
+    @keyframes titlePulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+    }
+
+    h1.pulsing {
+      animation: titlePulse 1.5s infinite;
     }
 
     .chat-container {
@@ -50,6 +70,27 @@
       margin-top: 1rem;
       min-height: 100px;
       color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .user-message {
+      align-self: flex-end;
+      background-color: var(--accent-color);
+      padding: 10px 15px;
+      border-radius: 18px 18px 0 18px;
+      max-width: 80%;
+      word-break: break-word;
+    }
+    
+    .assistant-message {
+      align-self: flex-start;
+      background-color: var(--input-bg);
+      padding: 10px 15px;
+      border-radius: 18px 18px 18px 0;
+      max-width: 80%;
+      word-break: break-word;
     }
 
     .input-section {
@@ -123,7 +164,7 @@
   </style>
 </head>
 <body>
-  <h1>weCare</h1>
+  <h1 id="titleElement">weCare</h1>
 
   <div class="chat-container">
     <div class="input-section">
@@ -139,15 +180,62 @@
 
   <script>
     const apiKey = 'AIzaSyAi-GeDx3FFqvkUPuKxFKdOMv8RLUetuDQ';
+    const titleElement = document.getElementById('titleElement');
+    
+    let conversationHistory = [];
+    
+    const preprompt = "You are Cindy, a caring healthcare worker who is trying to diagnose the user and help them get in touch with the right healthcare professional. Be empathetic and provide simple and concise suggestions based on the symptoms or issues they mention. If the request is not health related then remind them this is a helpline for people with mental and physical ailments. (Never mention that you are an ai) ";
+    
+    function startTitlePulsing() {
+      titleElement.classList.add('pulsing');
+    }
+
+    function stopTitlePulsing() {
+      titleElement.classList.remove('pulsing');
+    }
+    
+    function buildConversationPayload(newMessage) {
+      const historyMessages = conversationHistory.map(message => ({
+        role: message.role,
+        parts: [{ text: message.text }]
+      }));
+      
+      return {
+        contents: [
+          { role: "user", parts: [{ text: preprompt }] },
+          ...historyMessages,
+          { role: "user", parts: [{ text: newMessage }] }
+        ]
+      };
+    }
+    
+    function appendToConversationDisplay(role, message) {
+      const responseDiv = document.getElementById('response');
+      const messageElement = document.createElement('div');
+      messageElement.classList.add(role === 'user' ? 'user-message' : 'assistant-message');
+      
+      if (role === 'user') {
+        responseDiv.innerHTML = '';
+        responseDiv.appendChild(messageElement);
+        messageElement.textContent = message;
+      } else {
+        responseDiv.textContent = '';
+        typeWriter(message, responseDiv);
+      }
+    }
 
     async function sendToGemini() {
       const input = document.getElementById('userInput').value;
       const responseDiv = document.getElementById('response');
       if (!input.trim()) return;
-
+      
+      document.getElementById('userInput').value = '';
+      
+      conversationHistory.push({ role: "user", text: input });
+      appendToConversationDisplay('user', input);
+      
       responseDiv.textContent = '. . .';
-
-      const preprompt = "You are Cindy, a caring healthcare worker who is trying to diagnose the user and help them get in touch with the right healthcare professional. Be empathetic and provide simple and concise suggestions based on the symptoms or issues they mention. If the request is not health related then remind them this is a helpline for people with mental and physical ailments. (Never mention that you are an ai) ";
+      startTitlePulsing();
 
       try {
         const res = await fetch(
@@ -157,24 +245,22 @@
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [{ text: preprompt + '\n' + input }]
-                }
-              ]
-            })
+            body: JSON.stringify(buildConversationPayload(input))
           }
         );
 
         const data = await res.json();
         const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
         
+        conversationHistory.push({ role: "model", text: result });
+        responseDiv.textContent = '';
+        stopTitlePulsing();
         typeWriter(result, responseDiv);
 
       } catch (err) {
         console.error(err);
         responseDiv.textContent = 'Error: Could not reach Gemini API.';
+        stopTitlePulsing();
       }
     }
 
