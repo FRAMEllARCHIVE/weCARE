@@ -2,3 +2,5 @@ emergency protocol (remote alert). - requires backend?
 automatic geolocation 
 text to speech functionality (google cloud console) $$$
 search functionality $$$
+change focus to responses
+slowly type responses
