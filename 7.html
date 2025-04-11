@@ -564,7 +564,7 @@ Healthcare Assistant</div>
         }
         
         const data = await res.json();
-        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Based on what you've told me, I recommend contacting your primary care physician. If you need immediate assistance, please call our helpline at 0800-123-4567.';
+        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Based on what you\'ve told me, I recommend contacting your primary care physician. If you need immediate assistance, please call our helpline at 0800-123-4567.';
         
         conversationHistory.push({ role: "model", text: result });
         
@@ -575,7 +575,7 @@ Healthcare Assistant</div>
         
       } catch (finalErr) {
         console.error(finalErr);
-        const fallbackResponse = 'Based on what you've told me, I recommend contacting your primary care physician. If this is urgent, please call 999 or visit your nearest emergency department.';
+        const fallbackResponse = 'Based on what you\'ve told me, I recommend contacting your primary care physician. If this is urgent, please call 999 or visit your nearest emergency department.';
         conversationHistory.push({ role: "model", text: fallbackResponse });
         addMessageToUI('assistant', fallbackResponse);
         setLoadingState(false);
