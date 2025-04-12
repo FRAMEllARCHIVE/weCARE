@@ -1,9 +1,6 @@
 <!DOCTYPE html>
-
-
 <!-- Legal Footnote: This content is subject to copyright and should not be reproduced without permission. -->
 <!-- Written and created by Thomas John-Michael de Beer, feel free to contact me via tjdebeer@gmail.com  -->
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -94,7 +91,7 @@
       padding: 20px;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 200px);
+      height: calc(50vh - 5px);
       min-height: 300px;
     }
 
@@ -105,6 +102,7 @@
       padding-right: 10px;
       display: flex;
       flex-direction: column;
+   
       gap: 16px;
     }
 
@@ -150,6 +148,21 @@
       align-self: flex-start;
       background-color: var(--message-assistant-bg);
       border-radius: 16px 16px 16px 0;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 10px;
+      height: 18px;
+      background-color: var(--accent-color);
+      margin-left: 2px;
+      animation: blink 1s infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
 
     .message-time {
@@ -361,7 +374,7 @@
   <div class="chat-container">
     <div id="conversation" class="conversation">
       <div class="message assistant-message">
-        Hello, I'm Cindy from weCare. How can I help you with your health concerns today?
+        Hello, this is Cindy from weCare. What's troubling you today?
         <div class="message-time">Now</div>
       </div>
     </div>
@@ -479,16 +492,72 @@
       timeDiv.classList.add('message-time');
       timeDiv.textContent = formatTimestamp();
       
-      if (role === 'assistant') {
-        messageDiv.innerHTML = markdownToHtml(text);
-      } else {
+      if (role === 'user') {
         messageDiv.textContent = text;
+        messageDiv.appendChild(timeDiv);
+        conversationDiv.appendChild(messageDiv);
+        scrollToBottom();
+      } else {
+        const textContainer = document.createElement('span');
+        textContainer.classList.add('text-container');
+        messageDiv.appendChild(textContainer);
+        
+        const cursor = document.createElement('span');
+        cursor.classList.add('typing-cursor');
+        messageDiv.appendChild(cursor);
+        
+        messageDiv.appendChild(timeDiv);
+        conversationDiv.appendChild(messageDiv);
+        scrollToBottom();
+        
+        const formattedText = markdownToHtml(text);
+        
+        typeText(textContainer, formattedText, cursor);
+      }
+    }
+    
+    function typeText(element, html, cursor, delay = 30) {
+      let tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const textContent = tempDiv.textContent;
+      let textIndex = 0;
+      let htmlIndex = 0;
+      let inTag = false;
+      let currentTagBuffer = '';
+      let currentHtmlBuffer = '';
+      
+      function typeNextCharacter() {
+        if (htmlIndex >= html.length) {
+          cursor.remove();
+          return;
+        }
+        
+        const char = html[htmlIndex];
+        
+        if (char === '<') {
+          inTag = true;
+          currentTagBuffer = '<';
+        } else if (char === '>' && inTag) {
+          inTag = false;
+          currentTagBuffer += '>';
+          currentHtmlBuffer += currentTagBuffer;
+          element.innerHTML = currentHtmlBuffer;
+        } else if (inTag) {
+          currentTagBuffer += char;
+        } else {
+          currentHtmlBuffer += char;
+          element.innerHTML = currentHtmlBuffer;
+          textIndex++;
+          scrollToBottom();
+        }
+        
+        htmlIndex++;
+        
+        const randomDelay = Math.floor(Math.random() * 20) + delay - 10;
+        setTimeout(typeNextCharacter, randomDelay);
       }
       
-      messageDiv.appendChild(timeDiv);
-      
-      conversationDiv.appendChild(messageDiv);
-      scrollToBottom();
+      typeNextCharacter();
     }
     
     function scrollToBottom() {
