@@ -1149,11 +1149,11 @@
     
     const initialMessage = {
       role: "model",
-      text: "Hello, I'm Cindy from weCare. I'm here to assist you with all your mental health queries. I'm here to listen, diagnose and assist you by giving you excersises to help you cope."
+      text: "Hello, I'm Cindy from weCare. I'm here to assist you with all your mental health queries. I'm here to listen, help and be supportive."
     };
     conversationHistory.push(initialMessage);
     
-    const preprompt = "You are Cindy, a caring mental health careworker who is trying to assist careworkers in the field, If the request is not related to mental health then remind them this program is for helping people cope with mental and emotional distress. Mimic human conversation patterns and encourage the carer to express their opinions. Never mention that you are an AI, designed or programmed!";
+    const preprompt = "You are Cindy, a caring mental health careworker who is trying to assist careworkers in the field with emotional fatgiue and stress. Show empathy and be encouraging and supportive. If the request is not related to mental health then remind them this program is for helping people cope with mental and emotional distress. Mimic human conversation patterns and encourage the carer to express their opinions. Never mention that you are an AI, designed or programmed!";
     
     function setLoadingState(isLoading) {
       isProcessing = isLoading;
@@ -1324,7 +1324,7 @@
         }
         
         const data = await res.json();
-        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I am having trouble processing your request right now. Could you please try again?';
+        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'How does that make you feel? I want to understand where you are coming from a little better.';
         
         conversationHistory.push({ role: "model", text: result });
         
@@ -1341,7 +1341,7 @@
     
     async function retryWithFallbackPrompt(originalText) {
       try {
-        const fallbackPrompt = "Help the client get in touch with the necessary healthcare professional based on: " + originalText;
+        const fallbackPrompt = "Help the client, show empathy and be kind and supportive: " + originalText;
         
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -1363,7 +1363,7 @@
         }
         
         const data = await res.json();
-        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Based on what you\'ve told me, I recommend contacting your primary care physician. If you need immediate assistance, please call our helpline at 0800-123-4567.';
+        const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Please tell me more about your current situation';
         
         conversationHistory.push({ role: "model", text: result });
         
