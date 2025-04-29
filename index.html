@@ -763,6 +763,25 @@
         padding: 15px;
       }
     }     
+   
+   .status-stable {
+    color: green;
+    font-weight: bold;
+   font-size: 1.4rem;
+    }
+
+.status-moderate {
+    color: blue;
+    font-weight: bold;
+   font-size: 1.4rem; 
+}
+
+.status-elevated {
+    color: red;
+   font-size: 1.4rem; 
+    font-weight: bold;
+}
+      
     </style>
 </head>
 <body>
@@ -843,12 +862,14 @@
                 <i class="fas fa-user-md welcome-icon"></i>
             </div>
             <div class="dashboard-cards">
-                <div class="dashboard-card">
-                    <div class="dashboard-card-title">Mental Health Status</div>
-                    <div class="dashboard-card-value">UNDETERMINED</div>
-                    <div class="dashboard-card-desc">Overall mental health status</div>
-                </div>
-                
+
+               <div class="dashboard-card">
+    <div class="dashboard-card-title">Mental Health Status</div>
+    <div class="dashboard-card-value" id="mentalStatusValue">UNDETERMINED</div>
+    <div class="dashboard-card-desc" id="mentalStatusDetails">Overall mental health status</div>
+</div>
+               
+                  
                 <div class="dashboard-card">
                     <div class="dashboard-card-title">Activity</div>
                     <div class="dashboard-card-value">0</div>
@@ -923,26 +944,32 @@
         const storeName = 'accounts';
         let currentUser = null;
 
-        function openDatabase() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(dbName, 1);
+function openDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 2);
 
-                request.onerror = (event) => {
-                    reject(`Database error: ${event.target.errorCode}`);
-                };
+        request.onerror = (event) => {
+            reject(`Database error: ${event.target.errorCode}`);
+        };
 
-                request.onsuccess = (event) => {
-                    resolve(event.target.result);
-                };
+        request.onsuccess = (event) => {
+            resolve(event.target.result);
+        };
 
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(storeName)) {
-                        db.createObjectStore(storeName, { keyPath: 'email' });
-                    }
-                };
-            });
-        }
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: 'email' });
+            }
+            
+            if (!db.objectStoreNames.contains('psychStatus')) {
+                const psychStore = db.createObjectStore('psychStatus', { keyPath: 'id', autoIncrement: true });
+                psychStore.createIndex('userEmail', 'userEmail', { unique: false });
+                psychStore.createIndex('timestamp', 'timestamp', { unique: false });
+            }
+        };
+    });
+}
 
         async function saveAccount(email, password) {
             try {
@@ -1133,7 +1160,138 @@
     modal.classList.remove('show');
   });
 });   
+           //new logic
            
+           async function savePsychStatus(ratings) {
+    if (!currentUser) return false;
+    
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction(['psychStatus'], 'readwrite');
+        const store = transaction.objectStore('psychStatus');
+        
+        const statusData = {
+            userEmail: currentUser,
+            timestamp: new Date().toISOString(),
+            ...ratings
+        };
+        
+        return new Promise((resolve, reject) => {
+            const request = store.add(statusData);
+            
+            request.onsuccess = () => {
+                resolve(true);
+            };
+            
+            request.onerror = () => {
+                reject(false);
+            };
+        });
+    } catch (error) {
+        console.error("Error saving psychological status:", error);
+        return false;
+    }
+}
+           
+           async function analyzePsychologicalStatus() {
+    if (!currentUser || conversationHistory.length < 2) return;
+    
+    const recentMessages = conversationHistory
+        .filter(msg => msg.role === "user")
+        .slice(-5)
+        .map(msg => msg.text)
+        .join("\n");
+    
+    try {
+        const analysisPrompt = `
+            Analyze the following conversation messages from a mental health perspective.
+            Rate the person on a scale from 1-10 (where 1 is lowest and 10 is highest) for each of these factors:
+            - Stress
+            - Fatigue
+            - Anxiety
+            - Frustration
+            - Apathy
+            
+            Provide only the ratings as a JSON object with no additional text.
+            Example format: {"Stress": 5, "Fatigue": 3, "Anxiety": 7, "Frustration": 4, "Apathy": 2}
+            
+            Here are the messages to analyze:
+            ${recentMessages}
+        `;
+        
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [
+                        { role: "user", parts: [{ text: analysisPrompt }] }
+                    ]
+                })
+            }
+        );
+        
+        if (!res.ok) {
+            throw new Error(`Analysis API error: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        const resultText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        let jsonMatch = resultText.match(/\{[^}]*\}/);
+        if (jsonMatch) {
+            try {
+                const ratings = JSON.parse(jsonMatch[0]);
+                console.log("Psychological ratings:", ratings);
+                
+                await savePsychStatus(ratings);
+           updateMentalHealthStatus(); 
+            } catch (e) {
+                console.error("Error parsing psychological ratings:", e);
+            }
+        }
+    } catch (error) {
+        console.error("Error analyzing psychological status:", error);
+    }
+}
+
+async function getPsychStatusHistory() {
+    if (!currentUser) return [];
+    
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction(['psychStatus'], 'readonly');
+        const store = transaction.objectStore('psychStatus');
+        const index = store.index('userEmail');
+        
+        return new Promise((resolve, reject) => {
+            const request = index.getAll(IDBKeyRange.only(currentUser));
+            
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+            
+            request.onerror = (event) => {
+                reject(`Error getting psychological status: ${event.target.errorCode}`);
+            };
+        });
+    } catch (error) {
+        console.error("Error retrieving psychological status history:", error);
+        return [];
+    }
+}  
+           
+           async function showPsychStatusTrend() {
+    const history = await getPsychStatusHistory();
+    if (history.length === 0) return;
+    
+    console.log("Psychological Status History:", history);
+}
+  
+              
 //inner modal logic
                const apiKey = 'AIzaSyAi-GeDx3FFqvkUPuKxFKdOMv8RLUetuDQ';
     const titleElement = document.getElementById('titleElement');
@@ -1298,29 +1456,31 @@
     }
     
     async function sendMessage() {
-      const text = userInput.value.trim();
-      if (!text || isProcessing) return;
-      
-      userInput.value = '';
-      addMessageToUI('user', text);
-      conversationHistory.push({ role: "user", text });
-      
-      setLoadingState(true);
-      
-      try {
+    const text = userInput.value.trim();
+    if (!text || isProcessing) return;
+    
+    userInput.value = '';
+    addMessageToUI('user', text);
+    conversationHistory.push({ role: "user", text });
+    
+    setLoadingState(true);
+    
+    await analyzePsychologicalStatus();
+    
+    try {
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(buildConversationPayload(text))
-          }
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(buildConversationPayload(text))
+            }
         );
         
         if (!res.ok) {
-          throw new Error(`API error: ${res.status}`);
+            throw new Error(`API error: ${res.status}`);
         }
         
         const data = await res.json();
@@ -1329,15 +1489,16 @@
         conversationHistory.push({ role: "model", text: result });
         
         setTimeout(() => {
-          addMessageToUI('assistant', result);
-          setLoadingState(false);
+            addMessageToUI('assistant', result);
+            setLoadingState(false);
         }, 500);
         
-      } catch (err) {
+    } catch (err) {
         console.error(err);
         retryWithFallbackPrompt(text);
-      }
     }
+}
+
     
     async function retryWithFallbackPrompt(originalText) {
       try {
@@ -1449,7 +1610,65 @@
            
            
            
+           async function updateMentalHealthStatus() {
+    try {
+        const db = await openDatabase();
+        const transaction = db.transaction('psychStatus', 'readonly');
+        const store = transaction.objectStore('psychStatus');
+
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const records = request.result;
+
+            if (!records || records.length === 0) {
+                document.getElementById('mentalStatusValue').textContent = 'UNDETERMINED';
+                return;
+            }
+
+            const latestEntry = records.reduce((latest, current) =>
+                !latest || current.timestamp > latest.timestamp ? current : latest
+            , null);
+
+            const metrics = ['Stress', 'Fatigue', 'Anxiety', 'Frustration', 'Apathy'];
+            const values = metrics.map(key => latestEntry[key]).filter(val => typeof val === 'number');
+
+            const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+
+            let status = '';
+            let statusClass = '';
+            if (average <= 1.5) {
+                status = 'Stable';
+                statusClass = 'status-stable';
+            } else if (average <= 3) {
+                status = 'Moderate';
+                statusClass = 'status-moderate';
+            } else {
+                status = 'Elevated';
+                statusClass = 'status-elevated';
+            }
+
+            const statusElem = document.getElementById('mentalStatusValue');
+            statusElem.textContent = status;
+            statusElem.className = statusClass;
+
+            const detailsElem = document.getElementById('mentalStatusDetails');
+            detailsElem.innerHTML = metrics.map(key => 
+                `<div><strong>${key}:</strong> ${latestEntry[key]}</div>`
+            ).join('');
+        };
+
+        request.onerror = () => {
+            console.error('Error fetching psychological status from IndexedDB');
+        };
+    } catch (error) {
+        console.error('IndexedDB access error:', error);
+    }
+}
            
+           document.addEventListener('DOMContentLoaded', () => {
+    updateMentalHealthStatus();
+});  
                   
     </script>
 </body>
